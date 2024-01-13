@@ -1,0 +1,194 @@
+ 
+const int trigPin = 2;
+const int echoPin = 11;
+volatile byte state = 0;
+//////////////////////////////////////////////
+//  For IR Sensors                          //
+//  Setting the pins and values             //
+    const int ir1 = 8;                      //
+    const int ir2 = 3;                     //
+    int val1 = 0;                           //
+    int val2 = 0;                           //
+//////////////////////////////////////////////
+//  For timers                              // 
+    long int time1, time2;                  //
+    unsigned long int timer;                       //
+    unsigned long int dis_time;           //
+//////////////////////////////////////////////
+//  For UV light                            //
+    const int uv_pin = 13;                   //
+//////////////////////////////////////////////
+//  For Buzzer light                            //
+    const int buz_pin = 12;                   //
+//////////////////////////////////////////////
+//  For led light                            //
+    const int led_pin = 10;                   //
+//////////////////////////////////////////////
+// defines variables
+long duration;
+int dist;
+long cm;
+int safetyDistance;
+// include the library code:
+#include <LiquidCrystal.h>
+
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+const int rs = 1, en = 9, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+void setup()
+{
+  pinMode(9,OUTPUT);
+  pinMode(buz_pin,OUTPUT);    // buzzer pin
+  pinMode(uv_pin,OUTPUT);   // uv light
+  pinMode(led_pin,OUTPUT);  // led light for i/o
+  pinMode(ir1,INPUT);  // input ir sensor
+  pinMode(ir2,INPUT_PULLUP); // output ir sensor
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+    // set up the LCD's number of columns and rows:
+  attachInterrupt(digitalPinToInterrupt(ir2),ledstate,FALLING);
+  // setup LCD
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.home();
+  lcd.print("Automated ");
+  delay(2000);
+  lcd.clear();
+  lcd.print("Disinfection Box");
+  delay(2000);
+  //Serial.begin(9600);
+}
+void loop()
+{
+  if(state!=2)
+  {
+   excute();
+   state=1;
+  }
+}
+
+// To convert the microseconds to distance in cm
+long microsecondsToCentimeters(long microseconds) 
+{
+   return microseconds / 29 / 2; 
+}
+
+void excute()
+{
+   lcd.clear();
+   lcd.setCursor(0, 1);
+   lcd.print("Set Timer ...");
+   delay(1000);
+  // Clears the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  dist = microsecondsToCentimeters(duration);
+  delay(100);
+  lcd.clear();
+  dis_time=0;
+  if (dist >= 1 && dist <= 5)        
+  {
+    lcd.print("Time: 1 min.");
+    delay(500);
+    dis_time = 1000UL*60UL*1UL;
+  }
+  else if (dist > 5 && dist <= 10)
+  {
+    lcd.print ("Time: 3 min.");
+    delay(500);
+    dis_time = 1000UL*60UL*3UL;
+  }
+  else if (dist > 10 && dist <= 15)
+  {
+    lcd.print ("Time: 5 min.");
+    delay(500);
+    dis_time = 1000UL*60UL*5UL;
+  }
+  else if (dist > 15 && dist <= 20)
+  {
+    lcd.print ("Time: 8 min.");
+    delay(500);
+    dis_time = 1000UL*60UL*8UL;
+  }
+  else if (dist > 20 && dist <= 25)
+  {
+    lcd.print ("Time: 1 Hr.");
+    delay(500);
+    dis_time = 1000UL*60UL*60UL*1UL;
+  }
+  else if (dist > 25 && dist <= 30)
+  {
+    lcd.print ("Time: 2 Hrs.");
+    dis_time = 1000UL*60UL*60UL*2UL;
+  }
+  else
+  {
+    lcd.print ("Time: 1 Min.");
+    delay(500);
+    dis_time = 1000UL*60UL;
+  }
+  state=1;
+  if (digitalRead(ir1)== LOW)
+  {
+    lcd.clear();
+    digitalWrite(uv_pin,LOW);
+    digitalWrite(buz_pin,HIGH);
+    digitalWrite(led_pin,HIGH);
+    delay(2000);
+    digitalWrite(buz_pin,LOW);
+    digitalWrite(led_pin,LOW);
+    delay(1000);
+    lcd.print ("Disinfecting...");
+    delay(1000);
+    lcd.clear();
+    lcd.print("UV Light ON for : ");
+    delay(500);
+    timer=(dis_time/60000);
+    lcd.setCursor(0, 2);
+    lcd.print(timer);
+    lcd.setCursor(8, 2);
+    lcd.print("minutes");
+    digitalWrite(uv_pin,HIGH);
+    delay(dis_time);
+    digitalWrite(uv_pin,LOW);
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("UV Light OFF ");
+    delay(1000);
+    lcd.clear();
+    lcd.print(" Disinfection  ");
+    lcd.setCursor(0,2);
+    lcd.print("    Done !!!    ");
+    delay(1000);
+    lcd.clear();
+    lcd.setCursor(0,2);
+    lcd.print("Remove items");
+    delay(2000);
+   }
+  else 
+  {
+    digitalWrite(buz_pin,LOW);
+    digitalWrite(led_pin,LOW);
+    digitalWrite(uv_pin,LOW);
+    delay(100); 
+  }
+}
+
+void ledstate()
+{ 
+  Serial.println(state);
+  digitalWrite(uv_pin,LOW);
+  lcd.clear();
+  lcd.print("Remove items");
+  state = 2; 
+  digitalWrite(0,HIGH);
+  Serial.println(state);
+  detachInterrupt(digitalPinToInterrupt(ir2));
+
+}
